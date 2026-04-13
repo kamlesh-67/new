@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Drawing Canvas</title>
+    <title>3D Geometry Canvas - Three.js</title>
     <style>
         * {
             margin: 0;
@@ -12,604 +12,572 @@
         }
 
         body {
-            font-family: Arial, sans-serif;
-            background: #f0f0f0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #1a1a2e;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        #toolbar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
             padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+            min-width: 200px;
         }
 
-        h1 {
-            margin-bottom: 20px;
+        #toolbar h2 {
+            margin-bottom: 15px;
             color: #333;
+            font-size: 18px;
+            border-bottom: 2px solid #4a90e2;
+            padding-bottom: 10px;
         }
 
-        .toolbar {
-            display: flex;
-            gap: 10px;
+        .tool-group {
             margin-bottom: 20px;
-            flex-wrap: wrap;
-            justify-content: center;
         }
 
-        button {
-            padding: 10px 20px;
+        .tool-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
             font-size: 14px;
+        }
+
+        .tool-btn {
+            display: inline-block;
+            padding: 10px 15px;
+            margin: 5px;
+            background: #f0f0f0;
+            border: 2px solid #ddd;
+            border-radius: 8px;
             cursor: pointer;
-            border: none;
-            border-radius: 5px;
-            background: #4CAF50;
+            transition: all 0.3s ease;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .tool-btn:hover {
+            background: #e0e0e0;
+            transform: translateY(-2px);
+        }
+
+        .tool-btn.active {
+            background: #4a90e2;
             color: white;
-            transition: background 0.3s;
+            border-color: #357abd;
         }
 
-        button:hover {
-            background: #45a049;
+        .action-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 13px;
         }
 
-        button.active {
-            background: #2E7D32;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
         }
 
-        button.delete-btn {
-            background: #f44336;
+        .delete-btn:hover {
+            background: #c0392b;
         }
 
-        button.delete-btn:hover {
-            background: #d32f2f;
+        .clear-btn {
+            background: #95a5a6;
+            color: white;
         }
 
-        button.clear-btn {
-            background: #ff9800;
+        .clear-btn:hover {
+            background: #7f8c8d;
         }
 
-        button.clear-btn:hover {
-            background: #f57c00;
-        }
-
-        #canvas {
-            border: 2px solid #333;
-            background: white;
-            cursor: crosshair;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .instructions {
-            margin-top: 20px;
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
             padding: 15px;
-            background: #fff;
-            border-radius: 5px;
-            max-width: 800px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 300px;
+            font-size: 13px;
+            line-height: 1.6;
+            z-index: 100;
         }
 
-        .instructions h3 {
+        #instructions h3 {
             margin-bottom: 10px;
             color: #333;
+            font-size: 16px;
         }
 
-        .instructions ul {
-            margin-left: 20px;
-            color: #666;
+        #instructions ul {
+            padding-left: 20px;
         }
 
-        .instructions li {
+        #instructions li {
             margin-bottom: 5px;
+        }
+
+        #info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            font-size: 13px;
+            z-index: 100;
+        }
+
+        .color-picker {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            margin-top: 5px;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <h1>Drawing Canvas</h1>
-    
-    <div class="toolbar">
-        <button id="selectBtn" class="active">Select</button>
-        <button id="rectBtn">Rectangle</button>
-        <button id="squareBtn">Square</button>
-        <button id="circleBtn">Circle</button>
-        <button id="triangleBtn">Triangle</button>
-        <button id="lineBtn">Line</button>
-        <button id="deleteBtn" class="delete-btn">Delete Selected</button>
-        <button id="clearBtn" class="clear-btn">Clear All</button>
+    <div id="canvas-container"></div>
+
+    <div id="toolbar">
+        <h2>🎨 3D Shape Tools</h2>
+        
+        <div class="tool-group">
+            <label>Create Shapes:</label>
+            <button class="tool-btn active" data-tool="cube">📦 Cube</button>
+            <button class="tool-btn" data-tool="sphere">🔵 Sphere</button>
+            <button class="tool-btn" data-tool="cylinder">🛢️ Cylinder</button>
+            <button class="tool-btn" data-tool="cone">🔺 Cone</button>
+            <button class="tool-btn" data-tool="torus">🍩 Torus</button>
+            <button class="tool-btn" data-tool="pyramid">🔼 Pyramid</button>
+        </div>
+
+        <div class="tool-group">
+            <label>Actions:</label>
+            <button class="tool-btn" data-tool="select">✋ Select/Move</button>
+            <button class="tool-btn" data-tool="rotate">🔄 Rotate View</button>
+        </div>
+
+        <div class="tool-group">
+            <label>Shape Color:</label>
+            <input type="color" id="shapeColor" class="color-picker" value="#4a90e2">
+        </div>
+
+        <div class="tool-group">
+            <button class="action-btn delete-btn" id="deleteBtn">🗑️ Delete Selected</button>
+            <button class="action-btn clear-btn" id="clearBtn">🧹 Clear All</button>
+        </div>
     </div>
 
-    <canvas id="canvas" width="800" height="600"></canvas>
-
-    <div class="instructions">
-        <h3>Instructions:</h3>
+    <div id="instructions">
+        <h3>📖 Instructions</h3>
         <ul>
-            <li><strong>Select Tool:</strong> Click on shapes to select them (highlighted in red)</li>
-            <li><strong>Drag Shapes:</strong> When a shape is selected, drag it to move</li>
-            <li><strong>Rectangle/Square:</strong> Click and drag to draw</li>
-            <li><strong>Circle:</strong> Click for center, drag to set radius</li>
-            <li><strong>Triangle:</strong> Click and drag to define size</li>
-            <li><strong>Line:</strong> Click and drag to draw a line</li>
-            <li><strong>Delete:</strong> Remove the currently selected shape</li>
-            <li><strong>Clear All:</strong> Remove all shapes from canvas</li>
+            <li><strong>Select a shape tool</strong> and click on the ground plane to create</li>
+            <li><strong>Select Tool:</strong> Click objects to select (glows red), drag to move</li>
+            <li><strong>Rotate View:</strong> Click and drag background to rotate camera</li>
+            <li><strong>Scroll:</strong> Zoom in/out</li>
+            <li><strong>Right-click + Drag:</strong> Pan view</li>
+            <li><strong>Delete:</strong> Remove selected object</li>
         </ul>
     </div>
 
-    <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+    <div id="info">
+        <div>Objects: <span id="objectCount">0</span></div>
+        <div>Selected: <span id="selectedInfo">None</span></div>
+    </div>
 
-        // Shape classes
-        class Shape {
-            constructor(x, y, color) {
-                this.x = x;
-                this.y = y;
-                this.color = color || this.getRandomColor();
-                this.selected = false;
-            }
-
-            getRandomColor() {
-                const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
-                return colors[Math.floor(Math.random() * colors.length)];
-            }
-
-            isSelected(x, y) {
-                return false;
-            }
-
-            draw(ctx) {
-                // Override in subclasses
-            }
-
-            move(dx, dy) {
-                this.x += dx;
-                this.y += dy;
-            }
-
-            drawSelection(ctx) {
-                if (this.selected) {
-                    ctx.strokeStyle = '#ff0000';
-                    ctx.lineWidth = 2;
-                    ctx.setLineDash([5, 5]);
-                    const bounds = this.getBounds();
-                    ctx.strokeRect(bounds.x - 5, bounds.y - 5, bounds.width + 10, bounds.height + 10);
-                    ctx.setLineDash([]);
-                }
-            }
-
-            getBounds() {
-                return { x: this.x, y: this.y, width: 0, height: 0 };
-            }
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
         }
+    }
+    </script>
 
-        class Rectangle extends Shape {
-            constructor(x, y, width, height, color) {
-                super(x, y, color);
-                this.width = width;
-                this.height = height;
-            }
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-            draw(ctx) {
-                ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-                this.drawSelection(ctx);
-            }
+        // Global variables
+        let scene, camera, renderer, controls;
+        let raycaster, mouse;
+        let objects = [];
+        let selectedObject = null;
+        let currentTool = 'cube';
+        let isDragging = false;
+        let dragPlane;
+        let intersectionPoint = new THREE.Vector3();
+        let offset = new THREE.Vector3();
 
-            isSelected(x, y) {
-                return x >= this.x && x <= this.x + this.width &&
-                       y >= this.y && y <= this.y + this.height;
-            }
+        // Initialize the scene
+        function init() {
+            const container = document.getElementById('canvas-container');
 
-            getBounds() {
-                return { x: this.x, y: this.y, width: this.width, height: this.height };
-            }
-        }
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+            scene.fog = new THREE.Fog(0x1a1a2e, 20, 100);
 
-        class Square extends Shape {
-            constructor(x, y, size, color) {
-                super(x, y, color);
-                this.size = size;
-            }
+            // Camera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(8, 8, 8);
+            camera.lookAt(0, 0, 0);
 
-            draw(ctx) {
-                ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, this.size, this.size);
-                this.drawSelection(ctx);
-            }
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
 
-            isSelected(x, y) {
-                return x >= this.x && x <= this.x + this.size &&
-                       y >= this.y && y <= this.y + this.size;
-            }
+            // Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.screenSpacePanning = false;
+            controls.minDistance = 3;
+            controls.maxDistance = 50;
+            controls.maxPolarAngle = Math.PI / 2 - 0.05;
 
-            getBounds() {
-                return { x: this.x, y: this.y, width: this.size, height: this.size };
-            }
-        }
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
 
-        class Circle extends Shape {
-            constructor(x, y, radius, color) {
-                super(x, y, color);
-                this.radius = radius;
-            }
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(10, 15, 10);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.camera.near = 0.5;
+            directionalLight.shadow.camera.far = 50;
+            directionalLight.shadow.camera.left = -15;
+            directionalLight.shadow.camera.right = 15;
+            directionalLight.shadow.camera.top = 15;
+            directionalLight.shadow.camera.bottom = -15;
+            scene.add(directionalLight);
 
-            draw(ctx) {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                ctx.fill();
-                this.drawSelection(ctx);
-            }
+            const pointLight = new THREE.PointLight(0x4a90e2, 0.5, 50);
+            pointLight.position.set(-5, 5, -5);
+            scene.add(pointLight);
 
-            isSelected(x, y) {
-                const dx = x - this.x;
-                const dy = y - this.y;
-                return Math.sqrt(dx * dx + dy * dy) <= this.radius;
-            }
-
-            getBounds() {
-                return { 
-                    x: this.x - this.radius, 
-                    y: this.y - this.radius, 
-                    width: this.radius * 2, 
-                    height: this.radius * 2 
-                };
-            }
-        }
-
-        class Triangle extends Shape {
-            constructor(x, y, width, height, color) {
-                super(x, y, color);
-                this.width = width;
-                this.height = height;
-            }
-
-            draw(ctx) {
-                ctx.beginPath();
-                ctx.moveTo(this.x, this.y);
-                ctx.lineTo(this.x + this.width / 2, this.y - this.height);
-                ctx.lineTo(this.x + this.width, this.y);
-                ctx.closePath();
-                ctx.fillStyle = this.color;
-                ctx.fill();
-                this.drawSelection(ctx);
-            }
-
-            isSelected(x, y) {
-                // Point in triangle test
-                const x1 = this.x, y1 = this.y;
-                const x2 = this.x + this.width / 2, y2 = this.y - this.height;
-                const x3 = this.x + this.width, y3 = this.y;
-
-                const sign = (p1, p2, p3) => {
-                    return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
-                };
-
-                const d1 = sign({x, y}, {x: x1, y: y1}, {x: x2, y: y2});
-                const d2 = sign({x, y}, {x: x2, y: y2}, {x: x3, y: y3});
-                const d3 = sign({x, y}, {x: x3, y: y3}, {x: x1, y: y1});
-
-                const hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0);
-                const hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
-
-                return !(hasNeg && hasPos);
-            }
-
-            getBounds() {
-                return { x: this.x, y: this.y - this.height, width: this.width, height: this.height };
-            }
-        }
-
-        class Line extends Shape {
-            constructor(x1, y1, x2, y2, color) {
-                super(x1, y1, color);
-                this.x1 = x1;
-                this.y1 = y1;
-                this.x2 = x2;
-                this.y2 = y2;
-            }
-
-            draw(ctx) {
-                ctx.beginPath();
-                ctx.moveTo(this.x1, this.y1);
-                ctx.lineTo(this.x2, this.y2);
-                ctx.strokeStyle = this.color;
-                ctx.lineWidth = 3;
-                ctx.stroke();
-                this.drawSelection(ctx);
-            }
-
-            isSelected(x, y) {
-                // Check if point is close to line
-                const dist = this.pointToLineDistance(x, y);
-                return dist < 10;
-            }
-
-            pointToLineDistance(x, y) {
-                const A = x - this.x1;
-                const B = y - this.y1;
-                const C = this.x2 - this.x1;
-                const D = this.y2 - this.y1;
-
-                const dot = A * C + B * D;
-                const lenSq = C * C + D * D;
-                let param = -1;
-                
-                if (lenSq !== 0) param = dot / lenSq;
-
-                let xx, yy;
-
-                if (param < 0) {
-                    xx = this.x1;
-                    yy = this.y1;
-                } else if (param > 1) {
-                    xx = this.x2;
-                    yy = this.y2;
-                } else {
-                    xx = this.x1 + param * C;
-                    yy = this.y1 + param * D;
-                }
-
-                const dx = x - xx;
-                const dy = y - yy;
-                return Math.sqrt(dx * dx + dy * dy);
-            }
-
-            move(dx, dy) {
-                this.x1 += dx;
-                this.y1 += dy;
-                this.x2 += dx;
-                this.y2 += dy;
-            }
-
-            getBounds() {
-                const minX = Math.min(this.x1, this.x2);
-                const minY = Math.min(this.y1, this.y2);
-                const maxX = Math.max(this.x1, this.x2);
-                const maxY = Math.max(this.y1, this.y2);
-                return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
-            }
-        }
-
-        // Application state
-        let shapes = [];
-        let currentTool = 'select';
-        let isDrawing = false;
-        let startX, startY;
-        let currentShape = null;
-        let selectedShape = null;
-        let dragOffsetX = 0;
-        let dragOffsetY = 0;
-
-        // Tool buttons
-        const tools = ['select', 'rect', 'square', 'circle', 'triangle', 'line'];
-        
-        function setActiveTool(tool) {
-            currentTool = tool;
-            tools.forEach(t => {
-                const btn = document.getElementById(t + 'Btn');
-                if (btn) {
-                    btn.classList.toggle('active', t === tool);
-                }
+            // Ground plane
+            const groundGeometry = new THREE.PlaneGeometry(50, 50);
+            const groundMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x2d3436,
+                roughness: 0.8,
+                metalness: 0.2
             });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            ground.name = 'ground';
+            scene.add(ground);
+            objects.push(ground);
+
+            // Grid helper
+            const gridHelper = new THREE.GridHelper(50, 1, 0x444444, 0x333333);
+            scene.add(gridHelper);
+
+            // Raycaster
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            // Drag plane for moving objects
+            dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
+            // Event listeners
+            window.addEventListener('resize', onWindowResize);
+            renderer.domElement.addEventListener('pointerdown', onPointerDown);
+            renderer.domElement.addEventListener('pointermove', onPointerMove);
+            renderer.domElement.addEventListener('pointerup', onPointerUp);
+            renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
+
+            // Toolbar events
+            setupToolbar();
+
+            // Animation loop
+            animate();
         }
 
-        // Event listeners for tool buttons
-        document.getElementById('selectBtn').addEventListener('click', () => setActiveTool('select'));
-        document.getElementById('rectBtn').addEventListener('click', () => setActiveTool('rect'));
-        document.getElementById('squareBtn').addEventListener('click', () => setActiveTool('square'));
-        document.getElementById('circleBtn').addEventListener('click', () => setActiveTool('circle'));
-        document.getElementById('triangleBtn').addEventListener('click', () => setActiveTool('triangle'));
-        document.getElementById('lineBtn').addEventListener('click', () => setActiveTool('line'));
-        
-        document.getElementById('deleteBtn').addEventListener('click', () => {
-            if (selectedShape) {
-                shapes = shapes.filter(s => s !== selectedShape);
-                selectedShape = null;
-                draw();
-            }
-        });
-
-        document.getElementById('clearBtn').addEventListener('click', () => {
-            shapes = [];
-            selectedShape = null;
-            draw();
-        });
-
-        // Mouse events
-        canvas.addEventListener('mousedown', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            if (currentTool === 'select') {
-                // Find clicked shape (check from top to bottom)
-                selectedShape = null;
-                for (let i = shapes.length - 1; i >= 0; i--) {
-                    if (shapes[i].isSelected(x, y)) {
-                        selectedShape = shapes[i];
-                        selectedShape.selected = true;
-                        dragOffsetX = x - selectedShape.x;
-                        if (selectedShape instanceof Line) {
-                            dragOffsetY = y - selectedShape.y1;
-                        } else {
-                            dragOffsetY = y - selectedShape.y;
-                        }
-                        break;
+        function setupToolbar() {
+            const toolButtons = document.querySelectorAll('.tool-btn');
+            toolButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    toolButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentTool = btn.dataset.tool;
+                    
+                    if (currentTool === 'rotate') {
+                        controls.enabled = true;
                     }
-                }
-                // Deselect previous
-                shapes.forEach(s => {
-                    if (s !== selectedShape) s.selected = false;
                 });
-                draw();
-            } else {
-                isDrawing = true;
-                startX = x;
-                startY = y;
-            }
-        });
+            });
 
-        canvas.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            if (currentTool === 'select' && selectedShape && isMouseDown) {
-                // Drag selected shape
-                if (selectedShape instanceof Line) {
-                    const dx = x - startX - dragOffsetX;
-                    const dy = y - startY - dragOffsetY;
-                    selectedShape.move(dx, dy);
-                } else {
-                    const dx = x - dragOffsetX;
-                    const dy = y - dragOffsetY;
-                    if (!(selectedShape instanceof Circle)) {
-                        selectedShape.x = dx;
-                        selectedShape.y = dy;
-                    } else {
-                        selectedShape.x = dx;
-                        selectedShape.y = dy;
-                    }
-                }
-                startX = x;
-                startY = y;
-                draw();
-            } else if (isDrawing) {
-                draw();
-                
-                // Draw preview of shape being created
-                const width = x - startX;
-                const height = y - startY;
-
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-                ctx.lineWidth = 2;
-
-                switch (currentTool) {
-                    case 'rect':
-                        ctx.fillRect(startX, startY, width, height);
-                        ctx.strokeRect(startX, startY, width, height);
-                        break;
-                    case 'square':
-                        const size = Math.min(Math.abs(width), Math.abs(height));
-                        const squareWidth = width < 0 ? -size : size;
-                        const squareHeight = height < 0 ? -size : size;
-                        ctx.fillRect(startX, startY, squareWidth, squareHeight);
-                        ctx.strokeRect(startX, startY, squareWidth, squareHeight);
-                        break;
-                    case 'circle':
-                        const radius = Math.sqrt(width * width + height * height);
-                        ctx.beginPath();
-                        ctx.arc(startX, startY, radius, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.stroke();
-                        break;
-                    case 'triangle':
-                        ctx.beginPath();
-                        ctx.moveTo(startX, startY);
-                        ctx.lineTo(startX + width / 2, startY - height);
-                        ctx.lineTo(startX + width, startY);
-                        ctx.closePath();
-                        ctx.fill();
-                        ctx.stroke();
-                        break;
-                    case 'line':
-                        ctx.beginPath();
-                        ctx.moveTo(startX, startY);
-                        ctx.lineTo(x, y);
-                        ctx.stroke();
-                        break;
-                }
-            }
-        });
-
-        let isMouseDown = false;
-
-        canvas.addEventListener('mousedown', () => {
-            isMouseDown = true;
-        });
-
-        canvas.addEventListener('mouseup', (e) => {
-            isMouseDown = false;
-            
-            if (isDrawing) {
-                const rect = canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-
-                const width = x - startX;
-                const height = y - startY;
-
-                let newShape = null;
-
-                switch (currentTool) {
-                    case 'rect':
-                        if (Math.abs(width) > 5 && Math.abs(height) > 5) {
-                            newShape = new Rectangle(
-                                width < 0 ? x : startX,
-                                height < 0 ? y : startY,
-                                Math.abs(width),
-                                Math.abs(height)
-                            );
-                        }
-                        break;
-                    case 'square':
-                        const size = Math.min(Math.abs(width), Math.abs(height));
-                        if (size > 5) {
-                            newShape = new Square(
-                                width < 0 ? startX + size : startX,
-                                height < 0 ? startY + size : startY,
-                                size
-                            );
-                        }
-                        break;
-                    case 'circle':
-                        const radius = Math.sqrt(width * width + height * height);
-                        if (radius > 5) {
-                            newShape = new Circle(startX, startY, radius);
-                        }
-                        break;
-                    case 'triangle':
-                        if (Math.abs(width) > 5 && Math.abs(height) > 5) {
-                            newShape = new Triangle(
-                                width < 0 ? x : startX,
-                                height < 0 ? y : startY,
-                                Math.abs(width),
-                                Math.abs(height)
-                            );
-                        }
-                        break;
-                    case 'line':
-                        if (Math.abs(width) > 5 || Math.abs(height) > 5) {
-                            newShape = new Line(startX, startY, x, y);
-                        }
-                        break;
-                }
-
-                if (newShape) {
-                    shapes.push(newShape);
-                }
-
-                isDrawing = false;
-                currentShape = null;
-                draw();
-            }
-        });
-
-        canvas.addEventListener('mouseleave', () => {
-            isMouseDown = false;
-            if (isDrawing) {
-                isDrawing = false;
-                draw();
-            }
-        });
-
-        // Main draw function
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw all shapes
-            shapes.forEach(shape => shape.draw(ctx));
+            document.getElementById('deleteBtn').addEventListener('click', deleteSelected);
+            document.getElementById('clearBtn').addEventListener('click', clearAll);
         }
 
-        // Initial draw
-        draw();
+        function createShape(type, position, color) {
+            let geometry, material, mesh;
+            
+            material = new THREE.MeshStandardMaterial({
+                color: color,
+                roughness: 0.3,
+                metalness: 0.7,
+                emissive: color,
+                emissiveIntensity: 0.2
+            });
+
+            switch(type) {
+                case 'cube':
+                    geometry = new THREE.BoxGeometry(1, 1, 1);
+                    break;
+                case 'sphere':
+                    geometry = new THREE.SphereGeometry(0.6, 32, 32);
+                    break;
+                case 'cylinder':
+                    geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
+                    break;
+                case 'cone':
+                    geometry = new THREE.ConeGeometry(0.6, 1, 32);
+                    break;
+                case 'torus':
+                    geometry = new THREE.TorusGeometry(0.5, 0.2, 16, 32);
+                    break;
+                case 'pyramid':
+                    geometry = new THREE.ConeGeometry(0.7, 1, 4);
+                    break;
+                default:
+                    geometry = new THREE.BoxGeometry(1, 1, 1);
+            }
+
+            mesh = new THREE.Mesh(geometry, material);
+            mesh.position.copy(position);
+            mesh.position.y += 0.5; // Lift above ground
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            mesh.userData = { 
+                isObject: true, 
+                originalColor: color,
+                type: type
+            };
+
+            scene.add(mesh);
+            objects.push(mesh);
+            updateInfo();
+            
+            return mesh;
+        }
+
+        function onPointerDown(event) {
+            event.preventDefault();
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(objects);
+
+            if (intersects.length > 0) {
+                const intersect = intersects[0];
+                
+                if (intersect.object.name === 'ground' && currentTool !== 'select' && currentTool !== 'rotate') {
+                    // Create new shape
+                    const color = document.getElementById('shapeColor').value;
+                    const shape = createShape(currentTool, intersect.point, color);
+                    
+                    // Auto-select the created shape
+                    selectObject(shape);
+                } else if (intersect.object.userData.isObject) {
+                    // Select existing object
+                    selectObject(intersect.object);
+                    
+                    if (currentTool === 'select') {
+                        isDragging = true;
+                        controls.enabled = false;
+                        
+                        // Calculate offset
+                        const planeIntersect = new THREE.Vector3();
+                        raycaster.ray.intersectPlane(dragPlane, planeIntersect);
+                        offset.subVectors(planeIntersect, intersect.object.position);
+                    }
+                }
+            } else if (currentTool === 'select') {
+                // Deselect if clicking on empty space
+                deselectObject();
+            }
+        }
+
+        function onPointerMove(event) {
+            if (!isDragging || !selectedObject) return;
+
+            event.preventDefault();
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            const planeIntersect = new THREE.Vector3();
+            if (raycaster.ray.intersectPlane(dragPlane, planeIntersect)) {
+                selectedObject.position.copy(planeIntersect.sub(offset));
+                selectedObject.position.y = 0.5; // Keep on ground plane
+            }
+        }
+
+        function onPointerUp(event) {
+            isDragging = false;
+            if (currentTool === 'select') {
+                controls.enabled = true;
+            }
+        }
+
+        function selectObject(object) {
+            deselectObject();
+            
+            selectedObject = object;
+            
+            // Highlight effect
+            object.material.emissive.setHex(0xff0000);
+            object.material.emissiveIntensity = 0.5;
+            
+            // Add selection outline
+            const outlineGeometry = new THREE.EdgesGeometry(object.geometry);
+            const outlineMaterial = new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 2 });
+            const outline = new THREE.LineSegments(outlineGeometry, outlineMaterial);
+            outline.position.copy(object.position);
+            outline.rotation.copy(object.rotation);
+            outline.scale.copy(object.scale);
+            outline.name = 'selectionOutline';
+            scene.add(outline);
+            object.userData.outline = outline;
+            
+            updateInfo();
+        }
+
+        function deselectObject() {
+            if (selectedObject) {
+                // Restore original color
+                selectedObject.material.emissive.setHex(selectedObject.userData.originalColor);
+                selectedObject.material.emissiveIntensity = 0.2;
+                
+                // Remove outline
+                if (selectedObject.userData.outline) {
+                    scene.remove(selectedObject.userData.outline);
+                    selectedObject.userData.outline.geometry.dispose();
+                    selectedObject.userData.outline.material.dispose();
+                    delete selectedObject.userData.outline;
+                }
+                
+                selectedObject = null;
+                updateInfo();
+            }
+        }
+
+        function deleteSelected() {
+            if (!selectedObject) return;
+            
+            // Remove outline first
+            if (selectedObject.userData.outline) {
+                scene.remove(selectedObject.userData.outline);
+                selectedObject.userData.outline.geometry.dispose();
+                selectedObject.userData.outline.material.dispose();
+            }
+            
+            // Remove object
+            const index = objects.indexOf(selectedObject);
+            if (index > -1) {
+                objects.splice(index, 1);
+            }
+            
+            selectedObject.geometry.dispose();
+            selectedObject.material.dispose();
+            scene.remove(selectedObject);
+            selectedObject = null;
+            
+            updateInfo();
+        }
+
+        function clearAll() {
+            // Remove all objects except ground
+            for (let i = objects.length - 1; i >= 0; i--) {
+                const obj = objects[i];
+                if (obj.name !== 'ground') {
+                    if (obj.userData.outline) {
+                        scene.remove(obj.userData.outline);
+                        obj.userData.outline.geometry.dispose();
+                        obj.userData.outline.material.dispose();
+                    }
+                    
+                    obj.geometry.dispose();
+                    obj.material.dispose();
+                    scene.remove(obj);
+                    objects.splice(i, 1);
+                }
+            }
+            
+            deselectObject();
+            updateInfo();
+        }
+
+        function updateInfo() {
+            const objectCount = objects.filter(obj => obj.userData.isObject).length;
+            document.getElementById('objectCount').textContent = objectCount;
+            document.getElementById('selectedInfo').textContent = selectedObject ? 
+                `${selectedObject.userData.type.charAt(0).toUpperCase() + selectedObject.userData.type.slice(1)}` : 'None';
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            controls.update();
+            
+            // Animate selected object slightly
+            if (selectedObject) {
+                selectedObject.rotation.y += 0.01;
+                if (selectedObject.userData.outline) {
+                    selectedObject.userData.outline.rotation.copy(selectedObject.rotation);
+                    selectedObject.userData.outline.position.copy(selectedObject.position);
+                }
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        // Start the application
+        init();
     </script>
 </body>
 </html>
