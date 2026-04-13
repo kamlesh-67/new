@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drawing Canvas with Geometry Objects</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        button.active {
+            background-color: #2E7D32;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        #canvas {
+            border: 2px solid #333;
+            background-color: white;
+            cursor: crosshair;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 800px;
+        }
+
+        .info h3 {
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .info ul {
+            list-style-position: inside;
+            color: #666;
+        }
+
+        .info li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Drawing Canvas - Geometry Objects</h1>
+    
+    <div class="toolbar">
+        <button id="btn-select" onclick="setTool('select')">Select</button>
+        <button id="btn-rect" onclick="setTool('rect')">Rectangle</button>
+        <button id="btn-square" onclick="setTool('square')">Square</button>
+        <button id="btn-circle" onclick="setTool('circle')">Circle</button>
+        <button id="btn-triangle" onclick="setTool('triangle')">Triangle</button>
+        <button id="btn-line" onclick="setTool('line')">Line</button>
+        <button id="btn-clear" onclick="clearCanvas()">Clear All</button>
+        <button id="btn-delete" onclick="deleteSelected()">Delete Selected</button>
+    </div>
+
+    <canvas id="canvas" width="800" height="600"></canvas>
+
+    <div class="info">
+        <h3>Instructions:</h3>
+        <ul>
+            <li><strong>Select Tool:</strong> Click on objects to select them, drag to move them</li>
+            <li><strong>Drawing Tools:</strong> Click and drag on canvas to create shapes</li>
+            <li><strong>Delete:</strong> Select an object and click "Delete Selected" to remove it</li>
+            <li><strong>Clear All:</strong> Remove all objects from the canvas</li>
+        </ul>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let currentTool = 'select';
+        let isDrawing = false;
+        let isDragging = false;
+        let startX, startY;
+        let shapes = [];
+        let selectedShape = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        // Shape classes
+        class Shape {
+            constructor(x, y, color = '#3498db') {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.selected = false;
+            }
+
+            draw(ctx) {
+                // To be implemented by subclasses
+            }
+
+            containsPoint(px, py) {
+                // To be implemented by subclasses
+                return false;
+            }
+
+            move(dx, dy) {
+                this.x += dx;
+                this.y += dy;
+            }
+        }
+
+        class Rectangle extends Shape {
+            constructor(x, y, width, height, color) {
+                super(x, y, color);
+                this.width = width;
+                this.height = height;
+            }
+
+            draw(ctx) {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                if (this.selected) {
+                    ctx.strokeStyle = '#e74c3c';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(this.x - 2, this.y - 2, this.width + 4, this.height + 4);
+                }
+            }
+
+            containsPoint(px, py) {
+                return px >= this.x && px <= this.x + this.width &&
+                       py >= this.y && py <= this.y + this.height;
+            }
+        }
+
+        class Square extends Shape {
+            constructor(x, y, size, color) {
+                super(x, y, color);
+                this.size = size;
+            }
+
+            draw(ctx) {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+                
+                if (this.selected) {
+                    ctx.strokeStyle = '#e74c3c';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(this.x - 2, this.y - 2, this.size + 4, this.size + 4);
+                }
+            }
+
+            containsPoint(px, py) {
+                return px >= this.x && px <= this.x + this.size &&
+                       py >= this.y && py <= this.y + this.size;
+            }
+        }
+
+        class Circle extends Shape {
+            constructor(x, y, radius, color) {
+                super(x, y, color);
+                this.radius = radius;
+            }
+
+            draw(ctx) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                
+                if (this.selected) {
+                    ctx.strokeStyle = '#e74c3c';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }
+
+            containsPoint(px, py) {
+                const dx = px - this.x;
+                const dy = py - this.y;
+                return Math.sqrt(dx * dx + dy * dy) <= this.radius;
+            }
+        }
+
+        class Triangle extends Shape {
+            constructor(x, y, base, height, color) {
+                super(x, y, color);
+                this.base = base;
+                this.height = height;
+            }
+
+            draw(ctx) {
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x + this.base / 2, this.y - this.height);
+                ctx.lineTo(this.x + this.base, this.y);
+                ctx.closePath();
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                
+                if (this.selected) {
+                    ctx.strokeStyle = '#e74c3c';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }
+
+            containsPoint(px, py) {
+                // Barycentric coordinate method for point in triangle
+                const x1 = this.x;
+                const y1 = this.y;
+                const x2 = this.x + this.base / 2;
+                const y2 = this.y - this.height;
+                const x3 = this.x + this.base;
+                const y3 = this.y;
+
+                const denominator = ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
+                if (denominator === 0) return false;
+
+                const a = ((y2 - y3) * (px - x3) + (x3 - x2) * (py - y3)) / denominator;
+                const b = ((y3 - y1) * (px - x3) + (x1 - x3) * (py - y3)) / denominator;
+                const c = 1 - a - b;
+
+                return a >= 0 && a <= 1 && b >= 0 && b <= 1 && c >= 0 && c <= 1;
+            }
+        }
+
+        class Line extends Shape {
+            constructor(x1, y1, x2, y2, color) {
+                super(x1, y1, color);
+                this.x2 = x2;
+                this.y2 = y2;
+            }
+
+            draw(ctx) {
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x2, this.y2);
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                
+                if (this.selected) {
+                    ctx.strokeStyle = '#e74c3c';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    
+                    // Draw endpoints
+                    ctx.fillStyle = '#e74c3c';
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, 5, 0, Math.PI * 2);
+                    ctx.arc(this.x2, this.y2, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            containsPoint(px, py) {
+                // Check if point is close to the line (within 5 pixels)
+                const A = px - this.x;
+                const B = py - this.y;
+                const C = this.x2 - this.x;
+                const D = this.y2 - this.y;
+
+                const dot = A * C + B * D;
+                const len_sq = C * C + D * D;
+                let param = -1;
+                
+                if (len_sq !== 0) param = dot / len_sq;
+
+                let xx, yy;
+
+                if (param < 0) {
+                    xx = this.x;
+                    yy = this.y;
+                } else if (param > 1) {
+                    xx = this.x2;
+                    yy = this.y2;
+                } else {
+                    xx = this.x + param * C;
+                    yy = this.y + param * D;
+                }
+
+                const dx = px - xx;
+                const dy = py - yy;
+                return Math.sqrt(dx * dx + dy * dy) < 5;
+            }
+
+            move(dx, dy) {
+                this.x += dx;
+                this.y += dy;
+                this.x2 += dx;
+                this.y2 += dy;
+            }
+        }
+
+        function getRandomColor() {
+            const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function setTool(tool) {
+            currentTool = tool;
+            
+            // Update button states
+            document.querySelectorAll('.toolbar button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            const activeBtn = document.getElementById(`btn-${tool}`);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            }
+
+            // Update cursor
+            if (tool === 'select') {
+                canvas.style.cursor = 'default';
+            } else {
+                canvas.style.cursor = 'crosshair';
+            }
+
+            // Deselect current shape when switching tools
+            if (selectedShape) {
+                selectedShape.selected = false;
+                selectedShape = null;
+                redraw();
+            }
+        }
+
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        function redraw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw all shapes
+            shapes.forEach(shape => {
+                shape.draw(ctx);
+            });
+        }
+
+        function clearCanvas() {
+            shapes = [];
+            selectedShape = null;
+            redraw();
+        }
+
+        function deleteSelected() {
+            if (selectedShape) {
+                const index = shapes.indexOf(selectedShape);
+                if (index > -1) {
+                    shapes.splice(index, 1);
+                    selectedShape = null;
+                    redraw();
+                }
+            }
+        }
+
+        // Mouse event handlers
+        canvas.addEventListener('mousedown', (e) => {
+            const pos = getMousePos(e);
+            startX = pos.x;
+            startY = pos.y;
+
+            if (currentTool === 'select') {
+                // Check if clicking on any shape (reverse order to select topmost first)
+                let clickedShape = null;
+                for (let i = shapes.length - 1; i >= 0; i--) {
+                    if (shapes[i].containsPoint(pos.x, pos.y)) {
+                        clickedShape = shapes[i];
+                        break;
+                    }
+                }
+
+                // Deselect previous shape
+                if (selectedShape) {
+                    selectedShape.selected = false;
+                }
+
+                if (clickedShape) {
+                    selectedShape = clickedShape;
+                    selectedShape.selected = true;
+                    isDragging = true;
+                    dragOffsetX = pos.x - selectedShape.x;
+                    
+                    // Calculate Y offset based on shape type
+                    if (selectedShape instanceof Circle) {
+                        dragOffsetY = pos.y - selectedShape.y;
+                    } else if (selectedShape instanceof Triangle) {
+                        dragOffsetY = pos.y - selectedShape.y;
+                    } else {
+                        dragOffsetY = pos.y - selectedShape.y;
+                    }
+                    
+                    redraw();
+                }
+            } else {
+                isDrawing = true;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const pos = getMousePos(e);
+
+            if (currentTool === 'select' && isDragging && selectedShape) {
+                // Move the selected shape
+                const newX = pos.x - dragOffsetX;
+                const newY = pos.y - dragOffsetY;
+                
+                const dx = newX - selectedShape.x;
+                const dy = newY - selectedShape.y;
+                
+                selectedShape.move(dx, dy);
+                redraw();
+            } else if (isDrawing) {
+                // Preview the shape being drawn
+                redraw();
+                
+                const width = pos.x - startX;
+                const height = pos.y - startY;
+
+                ctx.fillStyle = getRandomColor();
+                
+                if (currentTool === 'rect') {
+                    ctx.fillRect(startX, startY, width, height);
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(startX, startY, width, height);
+                } else if (currentTool === 'square') {
+                    const size = Math.min(Math.abs(width), Math.abs(height));
+                    const actualWidth = width < 0 ? -size : size;
+                    const actualHeight = height < 0 ? -size : size;
+                    ctx.fillRect(startX, startY, actualWidth, actualHeight);
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(startX, startY, actualWidth, actualHeight);
+                } else if (currentTool === 'circle') {
+                    const radius = Math.sqrt(width * width + height * height);
+                    ctx.beginPath();
+                    ctx.arc(startX, startY, radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                } else if (currentTool === 'triangle') {
+                    ctx.beginPath();
+                    ctx.moveTo(startX, startY);
+                    ctx.lineTo(startX + width / 2, startY - height);
+                    ctx.lineTo(startX + width, startY);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                } else if (currentTool === 'line') {
+                    ctx.beginPath();
+                    ctx.moveTo(startX, startY);
+                    ctx.lineTo(pos.x, pos.y);
+                    ctx.strokeStyle = getRandomColor();
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            const pos = getMousePos(e);
+
+            if (isDrawing) {
+                const width = pos.x - startX;
+                const height = pos.y - startY;
+                const color = getRandomColor();
+
+                if (currentTool === 'rect' && Math.abs(width) > 5 && Math.abs(height) > 5) {
+                    shapes.push(new Rectangle(startX, startY, width, height, color));
+                } else if (currentTool === 'square') {
+                    const size = Math.min(Math.abs(width), Math.abs(height));
+                    if (size > 5) {
+                        const actualWidth = width < 0 ? -size : size;
+                        const actualHeight = height < 0 ? -size : size;
+                        shapes.push(new Square(startX, startY, actualWidth, color));
+                    }
+                } else if (currentTool === 'circle') {
+                    const radius = Math.sqrt(width * width + height * height);
+                    if (radius > 5) {
+                        shapes.push(new Circle(startX, startY, radius, color));
+                    }
+                } else if (currentTool === 'triangle') {
+                    if (Math.abs(width) > 5 && Math.abs(height) > 5) {
+                        shapes.push(new Triangle(startX, startY, width, height, color));
+                    }
+                } else if (currentTool === 'line') {
+                    const length = Math.sqrt(width * width + height * height);
+                    if (length > 5) {
+                        shapes.push(new Line(startX, startY, pos.x, pos.y, color));
+                    }
+                }
+
+                isDrawing = false;
+                redraw();
+            }
+
+            isDragging = false;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            if (isDrawing) {
+                isDrawing = false;
+                redraw();
+            }
+            isDragging = false;
+        });
+
+        // Initialize
+        setTool('select');
+        redraw();
+    </script>
+</body>
+</html>
