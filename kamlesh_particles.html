@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KAMLESH - Particle Canvas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sekuya&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #ffffff;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particleCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Set canvas size
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Particle configuration
+        const particleColor = '#121212';
+        const particleSize = 2;
+        const particleSpacing = 4;
+
+        // Text configuration
+        const text = 'KAMLESH';
+        const fontSize = Math.min(canvas.width / 8, 150);
+        
+        ctx.font = `${fontSize}px 'Sekuya', sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Get text dimensions and position
+        const textX = canvas.width / 2;
+        const textY = canvas.height / 2;
+
+        // Draw text to get image data
+        ctx.fillStyle = particleColor;
+        ctx.fillText(text, textX, textY);
+
+        // Get image data from canvas
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Particle class
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.originX = x;
+                this.originY = y;
+                this.size = particleSize;
+                this.color = particleColor;
+                this.vx = 0;
+                this.vy = 0;
+                this.friction = 0.95;
+                this.ease = 0.1;
+                this.dx = 0;
+                this.dy = 0;
+                this.distance = 0;
+                this.force = 0;
+                this.angle = 0;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            update(mouseX, mouseY) {
+                this.dx = mouseX - this.x;
+                this.dy = mouseY - this.y;
+                this.distance = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
+                this.force = -canvas.height / this.distance;
+                this.angle = Math.atan2(this.dy, this.dx);
+                
+                if (this.distance < 100) {
+                    this.vx += this.force * Math.cos(this.angle);
+                    this.vy += this.force * Math.sin(this.angle);
+                }
+
+                this.x += (this.originX - this.x) * this.ease + this.vx;
+                this.y += (this.originY - this.y) * this.ease + this.vy;
+                
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+            }
+        }
+
+        // Create particles from text
+        const particles = [];
+        
+        for (let y = 0; y < canvas.height; y += particleSpacing) {
+            for (let x = 0; x < canvas.width; x += particleSpacing) {
+                const index = (y * canvas.width + x) * 4;
+                const alpha = data[index + 3];
+                
+                if (alpha > 128) {
+                    particles.push(new Particle(x, y));
+                }
+            }
+        }
+
+        // Mouse interaction
+        let mouseX = 0;
+        let mouseY = 0;
+
+        canvas.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            mouseX = 0;
+            mouseY = 0;
+        });
+
+        // Animation loop
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            particles.forEach(particle => {
+                particle.update(mouseX, mouseY);
+                particle.draw();
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            // Redraw text and recreate particles
+            ctx.font = `${Math.min(canvas.width / 8, 150)}px 'Sekuya', sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = particleColor;
+            ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+            
+            const newImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const newData = newImageData.data;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            particles.length = 0;
+            
+            for (let y = 0; y < canvas.height; y += particleSpacing) {
+                for (let x = 0; x < canvas.width; x += particleSpacing) {
+                    const index = (y * canvas.width + x) * 4;
+                    const alpha = newData[index + 3];
+                    
+                    if (alpha > 128) {
+                        particles.push(new Particle(x, y));
+                    }
+                }
+            }
+        });
+
+        // Start animation
+        animate();
+    </script>
+</body>
+</html>
